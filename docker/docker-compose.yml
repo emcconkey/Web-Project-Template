@@ -1,0 +1,45 @@
+services:
+  backend:
+    container_name: helloworld-backend
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "${BACKEND_PORT}:5000"
+    # MOUNTS_DIR holds runtime data + secrets OUTSIDE the code tree. Defaults to
+    # .. (repo) for local dev; the server sets an absolute path. The .env is
+    # marked optional so the stack still starts without one (this sample needs
+    # no secrets to serve the example endpoint).
+    env_file:
+      - path: ${MOUNTS_DIR:-..}/.env
+        required: false
+    environment:
+      - FLASK_APP=app:create_app
+      # The SPA calls this API cross-origin, so allow its origin. Value is
+      # defined in start.sh (CORS_ORIGINS).
+      - CORS_ORIGINS=${CORS_ORIGINS}
+    volumes:
+      - ${MOUNTS_DIR:-..}/logs:/app/logs
+    restart: unless-stopped
+
+  frontend:
+    container_name: helloworld-frontend
+    build:
+      context: ..
+      dockerfile: docker/frontend/Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    # Injected into /config.js at container STARTUP (not baked into the image),
+    # so the same image runs in every environment. Value defined in start.sh.
+    environment:
+      - API_BASE_URL=${API_BASE_URL}
+    restart: unless-stopped
+    healthcheck:
+      # nginx serves the SPA on 3000. Use 127.0.0.1 (not localhost/::1).
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

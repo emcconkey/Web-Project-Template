@@ -1,0 +1,11 @@
+.git
+.idea
+.pytest_cache
+**/__pycache__
+*.py[cod]
+venv
+**/node_modules
+frontend/dist
+*.log
+.DS_Store
+**/.DS_Store
